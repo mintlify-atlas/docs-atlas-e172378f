@@ -1,0 +1,120 @@
+---
+title: 'Phonetic Shield'
+description: 'Generate pronounceable passwords built from syllable groups with high-entropy characters injected between them — passwords you can say aloud and still resist every bruteforce method.'
+keywords: ['phonetic password', 'pronounceable password', 'syllable', 'memorable', 'entropy injection']
+---
+
+Phonetic Shield is KeyForge's unique generation mode. Most password generators produce strings that are impossible to pronounce and difficult to memorise without a password manager. Phonetic Shield takes the opposite approach: it constructs passwords from real syllable patterns that your brain can encode phonetically, then weaves in high-entropy symbols and digits between each syllable group to satisfy security policies.
+
+<Note>
+  Phonetic Shield passwords are not weaker than random-character passwords of similar length. The syllable structure determines the shape of the password, but the actual characters are still chosen by `crypto.getRandomValues()` from pools with meaningful size. The result is a password that is both memorable and resistant to dictionary, brute-force, and pattern-based attacks — a combination that is genuinely rare in password tooling.
+</Note>
+
+## How it works
+
+<Steps>
+  <Step title="Generate syllables">
+    For each syllable group, KeyForge independently selects:
+    1. An **onset** consonant or consonant cluster (e.g. `b`, `tr`, `sn`).
+    2. A **vowel** or vowel digraph (e.g. `a`, `ee`, `oo`).
+    3. An optional **coda** consonant or cluster, applied with a 67% probability.
+
+    The result is a phonetically valid syllable like `bru`, `stond`, or `kee`.
+  </Step>
+  <Step title="Capitalise (optional)">
+    With **Capitalize syllables** on, the first character of each syllable is uppercased. This also drives the pronunciation guide display.
+  </Step>
+  <Step title="Inject entropy">
+    Between each pair of syllables — and always at the end — KeyForge inserts an entropy segment whose content depends on the selected **Entropy injection** level:
+
+    - **Light**: one symbol from `!@#$%^&*_+-`
+    - **Medium**: one symbol + one digit from `23456789` (order randomised)
+    - **Heavy**: symbol + digit + symbol (always in that fixed order `s1 + d + s2`)
+  </Step>
+  <Step title="Assemble the password">
+    Syllables and entropy segments are concatenated in order. The final password always ends with an entropy segment, ensuring every output ends with a non-alphabetic character.
+  </Step>
+  <Step title="Build the pronunciation guide">
+    The raw (pre-capitalisation) syllables are uppercased and joined with ` · ` to produce a guide string, for example `BRU · KE · STOND`. This guide is displayed below the password output when **Show pronunciation guide** is on.
+  </Step>
+</Steps>
+
+## Syllable structure
+
+Each syllable is assembled from three independently selected components:
+
+### Onset consonants
+
+Single consonants and common clusters drawn from:
+
+```text
+b  d  f  g  h  j  k  l  m  n  p  r  s  t  v  w  z
+bl br cl cr dr fl fr gl gr pl pr sl sm sn sp st sw tr wr sk sc
+```
+
+### Vowels
+
+```text
+a  e  i  o  u  ay  ee  oo  ai  au
+```
+
+### Coda (optional, 67% chance)
+
+Applied to roughly two-thirds of syllables:
+
+```text
+b  d  f  g  k  l  m  n  p  r  s  t  x  z
+nd  nt  st  ck  mp  nk  sk  sp
+```
+
+## Settings
+
+### Syllable groups
+
+<ParamField path="syllableCount" type="number" default="3">
+  Number of syllable groups to generate. Range: **2–6**. More syllable groups produce longer, more memorable passwords at the cost of a longer string to type. Each syllable contributes 2–5 characters, so a 3-group password typically runs 10–18 characters before entropy injection.
+</ParamField>
+
+### Entropy injection
+
+<ParamField path="entropyLevel" type="string" default="medium">
+  Controls the number and type of high-entropy characters inserted between (and after) each syllable group. Three levels are available:
+
+  | Level | Characters inserted | Example segment |
+  |---|---|---|
+  | `light` | 1 symbol from `!@#$%^&*_+-` | `*` |
+  | `medium` | 1 symbol + 1 digit from `23456789` (recommended) | `#7` or `7#` |
+  | `heavy` | symbol + digit + symbol | `!3@` |
+
+  **Medium** is the default and recommended level. It satisfies most "must contain a number and a symbol" password policies while keeping the password short enough to type from memory.
+</ParamField>
+
+### Options
+
+<ParamField path="capitalize" type="boolean" default="true">
+  Uppercase the first character of each syllable group. When on, a 3-syllable password might read `Bru#7Ke*4Stond!3` instead of `bru#7ke*4stond!3`. Also drives the pronunciation guide, which always shows syllables in full uppercase.
+</ParamField>
+
+<ParamField path="showGuide" type="boolean" default="true">
+  Display a pronunciation guide beneath the generated password. The guide shows each syllable in uppercase separated by ` · `, for example:
+
+  ```text
+  BRU · KE · STOND
+  ```
+
+  Use the guide to memorise the phonetic skeleton of your password. The entropy characters between syllables are not shown in the guide — focus on the syllable sounds and the positions of your injected characters will follow naturally.
+</ParamField>
+
+## Related modes
+
+<CardGroup cols={3}>
+  <Card title="Password" icon="lock" href="modes/password">
+    High-entropy random character passwords with full control.
+  </Card>
+  <Card title="Passphrase" icon="list" href="modes/passphrase">
+    Memorable multi-word passphrases.
+  </Card>
+  <Card title="PIN" icon="hash" href="modes/pin">
+    Short numeric codes with pattern blocking.
+  </Card>
+</CardGroup>

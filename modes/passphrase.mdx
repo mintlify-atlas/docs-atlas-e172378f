@@ -1,0 +1,116 @@
+---
+title: 'Passphrase generator'
+description: 'Generate memorable passphrases from a curated 200-word list using a cryptographically secure random number generator.'
+keywords: ['passphrase', 'word list', 'EFF', 'entropy', 'memorable password']
+---
+
+Passphrases trade character-level complexity for word-level length. A 5-word passphrase drawn from a 200-word list, with a 2-digit number and a symbol appended, delivers more raw entropy than most mixed-character passwords while remaining significantly easier to remember and type.
+
+## How it works
+
+<Steps>
+  <Step title="Select words at random">
+    KeyForge calls `crypto.getRandomValues()` once per word to pick an index into the curated 200-word list. Repeated words are possible by design — removing duplicates would reduce entropy.
+  </Step>
+  <Step title="Apply transformations">
+    With **Capitalize words** on, the first letter of each word is uppercased. With **Leet substitution** on, characters are replaced according to the map before capitalisation is applied: `a→@`, `e→3`, `i→1`, `o→0`, `s→$`, `t→7`.
+  </Step>
+  <Step title="Join with separator">
+    Words are joined using the active separator. If **Append 2-digit number** is on, the separator is also placed before the number.
+  </Step>
+  <Step title="Append extras">
+    A random 2-digit number (10–99) and/or a random symbol from `!@#$%&*` are appended according to the options you have enabled.
+  </Step>
+</Steps>
+
+## Entropy
+
+Each additional word, number, and symbol contributes independently to total entropy:
+
+| Component | Pool size | Entropy per unit |
+|---|---|---|
+| Each word | 200 words | ~7.6 bits |
+| 2-digit number (10–99) | 90 values | ~6.5 bits |
+| Appended symbol | 7 symbols (`!@#$%&*`) | ~2.8 bits |
+
+A default 5-word passphrase with number and symbol yields approximately **47.1 bits** of entropy. Increasing the word count to 7 raises this to **62.3 bits** — well above the commonly cited 60-bit threshold for strong secrets.
+
+<Tip>
+  Use 6 or more words if the passphrase will protect a high-value account. The jump from 5 to 6 words adds another ~7.6 bits of entropy, roughly doubling the search space for a brute-force attacker.
+</Tip>
+
+## The word list
+
+KeyForge uses a hand-curated list of exactly **200 short English words** (3–4 letters each). The list prioritises:
+
+- **Unambiguous spelling** — no homophones with different spellings (e.g. `hear`/`here`).
+- **Common vocabulary** — words recognisable without specialist knowledge.
+- **Short length** — all words are 3 or 4 characters to keep passphrases typeable.
+
+Selection is uniform: every word has an equal `1/200` probability of being chosen.
+
+## Settings
+
+### Word count
+
+<ParamField path="wordCount" type="number" default="5">
+  Number of words in the passphrase. Range: **3–10**. Each additional word adds approximately 7.6 bits of entropy.
+</ParamField>
+
+### Separator
+
+<ParamField path="separator" type="string" default="-">
+  Character placed between each word (and before the appended number, if enabled). Available options:
+
+  | Label | Character | Example |
+  |---|---|---|
+  | Dash | `-` | `Bold-Fire-Keen-42!` |
+  | Dot | `.` | `Bold.Fire.Keen.42!` |
+  | Space | ` ` | `Bold Fire Keen 42!` |
+  | Underscore | `_` | `Bold_Fire_Keen_42!` |
+  | Hash | `#` | `Bold#Fire#Keen#42!` |
+  | None | *(empty)* | `BoldFireKeen42!` |
+</ParamField>
+
+### Options
+
+<ParamField path="capitalize" type="boolean" default="true">
+  Capitalise the first letter of every word. Increases readability and adds a modest amount of search-space complexity for attackers who target all-lowercase wordlists.
+</ParamField>
+
+<ParamField path="appendNum" type="boolean" default="true">
+  Append a cryptographically random 2-digit number in the range 10–99 (90 possible values, ~6.5 bits). The number is placed after the last word, separated by the active separator.
+</ParamField>
+
+<ParamField path="appendSym" type="boolean" default="true">
+  Append one symbol chosen at random from `!@#$%&*` (7 possible values, ~2.8 bits). The symbol is placed at the very end of the passphrase, after the number if one is appended.
+</ParamField>
+
+<ParamField path="useLeet" type="boolean" default="false">
+  Apply leet substitutions to every word before the separator is added. The full substitution map is:
+
+  | Original | Replacement |
+  |---|---|
+  | `a` / `A` | `@` |
+  | `e` / `E` | `3` |
+  | `i` / `I` | `1` |
+  | `o` / `O` | `0` |
+  | `s` / `S` | `$` |
+  | `t` / `T` | `7` |
+
+  Leet substitution is off by default. When combined with **Capitalize words**, capitalisation is applied after leet substitution, so `a` becomes `@` (not `A`).
+</ParamField>
+
+## Related modes
+
+<CardGroup cols={3}>
+  <Card title="Password" icon="lock" href="modes/password">
+    High-entropy random character passwords.
+  </Card>
+  <Card title="PIN" icon="hash" href="modes/pin">
+    Short numeric codes with pattern blocking.
+  </Card>
+  <Card title="Phonetic Shield" icon="volume-2" href="modes/phonetic-shield">
+    Pronounceable passwords with injected entropy.
+  </Card>
+</CardGroup>

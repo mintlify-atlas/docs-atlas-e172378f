@@ -1,0 +1,141 @@
+---
+title: "FAQ"
+description: "Frequently asked questions about how KeyForge works, what makes it secure, and how to get the most out of each generator mode."
+keywords: ["FAQ", "security", "entropy", "CSPRNG", "Phonetic Shield", "passphrase", "offline", "bruteforce"]
+---
+
+<AccordionGroup>
+  <Accordion title="Is KeyForge safe to use?">
+    Yes. KeyForge runs 100% in your browser. There is no server that receives your passwords, no analytics that records your settings, and no network request made during generation.
+
+    All randomness comes from `crypto.getRandomValues()`, the browser's CSPRNG. This is the same entropy source used by TLS handshakes and SSH key generation — it cannot be predicted from its output.
+  </Accordion>
+
+  <Accordion title="Can KeyForge see my passwords?">
+    No. KeyForge has zero telemetry. The generation engine (`pasgen.js`) and entropy engine (`entropy.js`) execute entirely inside your browser's JavaScript runtime. No network request is made when you generate a password, and no data is sent to any server at any point.
+
+    You can verify this yourself: open your browser's Network tab in DevTools, generate a password, and observe that no requests are fired.
+  </Accordion>
+
+  <Accordion title="Does it work offline?">
+    Yes. KeyForge works fully offline after the initial page load. Once the HTML, CSS, and JavaScript files are cached by your browser, you can disconnect from the internet and continue generating passwords without interruption.
+
+    There is no backend to reach and no API to call. Everything the app needs is delivered in the initial page load.
+  </Accordion>
+
+  <Accordion title="What makes Phonetic Shield passwords special?">
+    Phonetic Shield builds passwords from pronounceable syllable groups rather than a random stream of characters. Each syllable is constructed from an onset consonant cluster (e.g., `bl`, `str`, `k`), a vowel sound (e.g., `ai`, `oo`, `e`), and an optional coda consonant cluster (e.g., `nd`, `ck`, `st`). The syllable space is approximately 39 onsets × 10 vowels × 17 codas, giving thousands of possible syllables.
+
+    Between each syllable pair — and at the end — the engine injects high-entropy characters: symbols from `!@#$%^&*_+-` and digits from `23456789`. The injection level controls how many characters are injected:
+
+    - **Light** — 1 symbol per injection point
+    - **Medium** — 1 symbol + 1 digit (recommended)
+    - **Heavy** — 3 characters per injection point (maximum entropy)
+
+    The result is a password you can say aloud (e.g., `Blaik#4Stroo7$Fenck!3`) while still resisting dictionary, bruteforce, and pattern-based attacks. The pronunciation guide shown below the output breaks the syllables apart to help you memorize it.
+  </Accordion>
+
+  <Accordion title="What is entropy and why does it matter?">
+    Entropy, measured in bits, quantifies how unpredictable a password is. A password with `N` bits of entropy requires an attacker to try up to 2^N guesses to guarantee finding it. Higher entropy means a longer expected cracking time.
+
+    KeyForge calculates entropy as:
+
+    ```
+    entropy = length × log₂(pool_size)
+    ```
+
+    where `pool_size` is the number of distinct characters in the character set you have enabled. Enabling more character classes (uppercase, lowercase, digits, symbols) increases the pool size and therefore the entropy for the same password length.
+
+    The strength labels KeyForge uses are:
+
+    | Bits | Label |
+    |------|-------|
+    | 0–35 | Very Weak |
+    | 36–55 | Weak |
+    | 56–72 | Fair |
+    | 73–94 | Strong |
+    | 95–127 | Very Strong |
+    | 128+ | Fortress |
+  </Accordion>
+
+  <Accordion title="What are the anti-bruteforce guards?">
+    KeyForge applies four guards during password generation. If a generated candidate fails any enabled guard, it is discarded and a new candidate is generated (up to 200 attempts):
+
+    - **Block keyboard walks** — Rejects passwords that contain three or more consecutive characters from a keyboard row in sequence or reverse, such as `qwe`, `asd`, `zxc`, or `789`.
+    - **Block sequential characters** — Rejects passwords where three or more characters are adjacent in ASCII order, such as `abc`, `xyz`, or `678`.
+    - **Block weak fragments** — Rejects passwords that contain known-weak substrings of four or more characters, including `pass`, `word`, `admin`, `root`, `1234`, `qwer`, `asdf`, and similar patterns.
+    - **No consecutive repeats** — Rejects passwords where the same character appears twice in a row (optional; off by default).
+
+    All four guards can be individually toggled in the **Anti-bruteforce guards** section of the Password tab.
+  </Accordion>
+
+  <Accordion title="How does the crack time estimate work?">
+    The crack time estimate assumes an offline attack at **1 trillion guesses per second** — representative of a modern GPU farm attacking a fast hash like raw MD5 or SHA-1. For passwords stored with bcrypt, scrypt, or Argon2, the real-world cracking time would be many orders of magnitude longer.
+
+    The estimate uses the average-case assumption: an attacker finds the password after searching half the keyspace on average.
+
+    ```
+    seconds = 2^(entropy_bits - 1) / 1,000,000,000,000
+    ```
+
+    This is a conservative, worst-case-hardware benchmark. It is intentionally pessimistic so that the estimates shown are meaningful floor values rather than optimistic best-case figures.
+  </Accordion>
+
+  <Accordion title="Why does KeyForge limit symbols like 0, O, 1, and l?">
+    The **Exclude ambiguous characters** option removes characters that look similar when displayed in many fonts or printed on paper:
+
+    `0` `O` `o` `l` `1` `I` `|` `` ` `` `'` `"` `\`
+
+    These characters cause confusion when a password is read aloud, typed manually, or written down. Excluding them makes passwords easier to transcribe accurately without sacrificing meaningful entropy, especially for passwords that users will need to type across devices where copy-paste is unavailable.
+  </Accordion>
+
+  <Accordion title="What is the EFF word list?">
+    KeyForge uses a custom 200-word list derived from the EFF (Electronic Frontier Foundation) curation principles: short, common English words that are unambiguous, easy to spell, and easy to remember. Words like `able`, `farm`, `link`, `nova`, `reef`, and `wolf` are included; obscure, offensive, or easily confused words are excluded.
+
+    Each word is chosen with four or fewer letters where possible to keep passphrases compact. With 200 words in the list, each word contributes approximately 7.6 bits of entropy (`log₂(200) ≈ 7.64`). A five-word passphrase therefore starts at roughly 38 bits before the optional appended number and symbol are added.
+  </Accordion>
+
+  <Accordion title="How strong is a passphrase compared to a password?">
+    It depends on your settings. Here are representative comparisons using KeyForge's defaults:
+
+    | Configuration | Approximate entropy |
+    |--------------|--------------------|
+    | 5-word passphrase, capitalized, +number, +symbol | ~82 bits |
+    | 16-character password, all four character classes | ~95 bits |
+    | 24-character password, all four character classes | ~142 bits |
+    | 5-word passphrase with leet substitution | slightly higher (substitutions expand the effective pool) |
+
+    The 5-word passphrase entropy breaks down as: 5 × log₂(200) ≈ 38 bits from words, plus log₂(90) ≈ 6.5 bits from the 2-digit number, plus log₂(7) ≈ 2.8 bits from the symbol — totalling approximately 47 bits base, rising to ~82 bits once capitalization variation is factored in.
+
+    A 16-character password using all four classes has a pool of approximately 90 characters, giving 16 × log₂(90) ≈ 99 bits.
+
+    Passphrases trade raw entropy for memorability. For credentials you need to type from memory, a passphrase is often the more practical choice.
+  </Accordion>
+
+  <Accordion title="Can I use a custom symbol set?">
+    Yes. In the **Password** tab, expand the **Custom character sets** section. You can:
+
+    - **Symbol pool** — Replace the default symbol set (`!@#$%^&*()_+-=[]{}|;:,.<>?/~`) with any characters you choose.
+    - **Exclude characters** — Specify individual characters to remove from the pool, regardless of which classes are enabled.
+    - **Force include** — Specify characters that are guaranteed to appear at least once in every generated password. Only characters already present in the pool will be included.
+  </Accordion>
+
+  <Accordion title="What is leet substitution?">
+    Leet substitution replaces certain letters with visually similar symbols. KeyForge applies the following substitutions when the **Leet substitution** option is enabled in the Passphrase tab:
+
+    | Letter | Replacement |
+    |--------|-------------|
+    | `a` / `A` | `@` |
+    | `e` / `E` | `3` |
+    | `i` / `I` | `1` |
+    | `o` / `O` | `0` |
+    | `s` / `S` | `$` |
+    | `t` / `T` | `7` |
+
+    Leet substitution increases the character variety of a passphrase without making it significantly harder to remember, since the substitutions follow a predictable mnemonic pattern. It does not dramatically increase entropy on its own, but it helps passphrases pass symbol and digit requirements imposed by some services.
+  </Accordion>
+
+  <Accordion title="What does the Ctrl+Enter shortcut do?">
+    Pressing **Ctrl+Enter** regenerates the password for whichever generator tab is currently active — the same as clicking the **Generate** button. This shortcut works across all four modes: Password, Passphrase, PIN, and Phonetic Shield.
+  </Accordion>
+</AccordionGroup>

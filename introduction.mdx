@@ -1,0 +1,63 @@
+---
+title: "Introduction"
+description: "KeyForge is a fully client-side, cryptographically secure password generator with anti-bruteforce guards, entropy visualization, and a unique Phonetic Shield mode — with zero telemetry."
+---
+
+## What is KeyForge?
+
+KeyForge is a free, open-source web application that generates strong passwords, passphrases, PINs, and phonetic passwords directly in your browser. Every password is generated using `crypto.getRandomValues()` — the browser's cryptographically secure pseudo-random number generator (CSPRNG), the same source used by TLS and other security-critical systems.
+
+KeyForge never sends your passwords anywhere. There is no backend server. No analytics. No cookies. Your generated credentials stay on your device.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Password Generator" icon="key" href="modes/password">
+    Generate passwords 8–128 characters long with full control over character classes, minimum counts, and custom symbol pools.
+  </Card>
+  <Card title="Passphrase Generator" icon="list-ul" href="modes/passphrase">
+    Build memorable passphrases from a 200-word curated list with separators, capitalization, and leet substitution.
+  </Card>
+  <Card title="PIN Generator" icon="hashtag" href="modes/pin">
+    Generate 4–20 digit PINs with sequence and common pattern blocking.
+  </Card>
+  <Card title="Phonetic Shield" icon="shield-halved" href="modes/phonetic-shield">
+    Create pronounceable passwords from syllable groups with injected entropy — easy to say aloud, hard to crack.
+  </Card>
+</CardGroup>
+
+<CardGroup cols={2}>
+  <Card title="Anti-Bruteforce Guards" icon="shield-check" href="security/anti-bruteforce">
+    Block keyboard walks, sequential characters, ambiguous characters, and weak dictionary fragments automatically.
+  </Card>
+  <Card title="Entropy Visualization" icon="chart-bar" href="security/entropy">
+    See real-time entropy bits, crack-time estimates, and a color-coded DNA bar for every generated password.
+  </Card>
+</CardGroup>
+
+## How it works
+
+<Steps>
+  <Step title="Open KeyForge">
+    Visit [keyforgegd.vercel.app](https://keyforgegd.vercel.app) in any modern browser. No sign-up or installation required.
+  </Step>
+  <Step title="Choose a generator mode">
+    Select **Password**, **Passphrase**, **PIN**, or **Phonetic Shield** from the tab bar at the top.
+  </Step>
+  <Step title="Configure your settings">
+    Adjust length, character classes, anti-bruteforce guards, and other options for your chosen mode.
+  </Step>
+  <Step title="Generate and copy">
+    Click the **Generate** button (or press **Ctrl+Enter**) to generate a password. Click the copy icon or click the output field to copy it to your clipboard.
+  </Step>
+</Steps>
+
+## Privacy guarantee
+
+<Note>
+KeyForge operates with a **Zero Data Policy**. All generation runs in your browser using `crypto.getRandomValues()`. No passwords, settings, or usage data are ever transmitted to any server. The only browser storage used is `localStorage` for your theme preference.
+</Note>
+
+## Open source
+
+KeyForge is fully open source. You can inspect every line of the generation logic on [GitHub](https://github.com/Gosiverua/keyforgegd).

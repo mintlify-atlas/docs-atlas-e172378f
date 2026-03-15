@@ -1,0 +1,182 @@
+---
+title: 'Anti-bruteforce guards'
+description: 'How KeyForge blocks the most common password cracking strategies'
+---
+
+Generating a random password is necessary but not sufficient. Crackers exploit predictable structure — keyboard patterns, dictionary words, sequential runs — to dramatically shrink the effective search space. KeyForge applies up to five guards on every generated candidate and retries if any fire.
+
+<Tip>
+  By default, KeyForge enables **sequential / keyboard-walk blocking** and **weak-fragment blocking**. Consecutive-repeat blocking is available as an additional opt-in. Ambiguous-character exclusion is a separate option that also reduces cracking surface by eliminating visually confusable characters.
+</Tip>
+
+## Guard 1 — Ambiguous character exclusion
+
+When enabled, 11 visually ambiguous characters are stripped from the pool before a single character is drawn:
+
+```javascript pasgen.js
+const AMBIGUOUS_CHARS = new Set(['0','O','o','l','1','I','|','`','\"','\\']);
+```
+
+This prevents passwords that are difficult to transcribe accurately — a common source of lockouts — and eliminates characters that receive special treatment in shells, JSON, and SQL, reducing injection risk during manual entry.
+
+## Guard 2 — Keyboard walk detection
+
+`hasKeyboardWalk()` checks whether any substring of length 3 or more appears as a contiguous run on a standard keyboard row, in either direction:
+
+```javascript pasgen.js
+const KB_ROWS = [
+  'qwertyuiop',
+  'asdfghjkl',
+  'zxcvbnm',
+  '1234567890',
+];
+
+function hasKeyboardWalk(str, seqLen = 3) {
+  const lower = str.toLowerCase();
+  for (const row of KB_ROWS) {
+    for (let i = 0; i <= lower.length - seqLen; i++) {
+      const sub = lower.slice(i, i + seqLen);
+      const idx = row.indexOf(sub);
+      if (idx !== -1) return true;
+      // Reverse walk
+      const rev = sub.split('').reverse().join('');
+      if (row.indexOf(rev) !== -1) return true;
+    }
+  }
+  return false;
+}
+```
+
+Both forward (`qwe`) and reverse (`ewq`) walks are caught. The check is case-insensitive, so mixed-case walks like `Qwe` are also rejected.
+
+## Guard 3 — Sequential character blocking
+
+`hasSequentialChars()` detects ascending or descending runs in Unicode code point order:
+
+```javascript pasgen.js
+function hasSequentialChars(str, seqLen = 3) {
+  for (let i = 0; i <= str.length - seqLen; i++) {
+    let asc = true, desc = true;
+    for (let j = 0; j < seqLen - 1; j++) {
+      const diff = str.charCodeAt(i + j + 1) - str.charCodeAt(i + j);
+      if (diff !== 1)  asc  = false;
+      if (diff !== -1) desc = false;
+    }
+    if (asc || desc) return true;
+  }
+  return false;
+}
+```
+
+Any 3-character substring where each code point differs from its neighbor by exactly +1 (ascending: `abc`, `123`) or exactly -1 (descending: `cba`, `321`) causes the candidate to be rejected.
+
+## Guard 4 — Weak fragment blocking
+
+`hasWeakFragment()` performs a case-insensitive substring search against a curated set of 37 high-risk dictionary fragments:
+
+```javascript pasgen.js
+const WEAK_PATTERNS = new Set([
+  'pass','word','admin','root','user','login','test','demo',
+  'temp','qwer','asdf','zxcv','1234','2345','3456','4567',
+  '5678','6789','abcd','aaaa','bbbb','cccc','dddd','eeee',
+  'hello','welco','secre','chang','defau','guest','name',
+  'email','birth','year','month','date','home','work','love',
+]);
+
+function hasWeakFragment(str) {
+  const lower = str.toLowerCase();
+  for (const frag of WEAK_PATTERNS) {
+    if (lower.includes(frag)) return true;
+  }
+  return false;
+}
+```
+
+These fragments cover the most common cracking dictionary hits: credential terms (`pass`, `admin`, `root`, `login`), keyboard sequences (`qwer`, `asdf`, `zxcv`), digit runs (`1234`–`6789`), repeated characters (`aaaa`–`eeee`), and common personal data anchors (`name`, `email`, `birth`, `date`).
+
+## Guard 5 — Consecutive repeat blocking
+
+`hasConsecutiveRepeats()` rejects any password where the same character appears in two adjacent positions:
+
+```javascript pasgen.js
+function hasConsecutiveRepeats(str) {
+  for (let i = 0; i < str.length - 1; i++) {
+    if (str[i] === str[i + 1]) return true;
+  }
+  return false;
+}
+```
+
+This blocks patterns like `aa`, `11`, and `$$` that appear in many low-effort passwords and are explicitly tested by credential-stuffing tools.
+
+## Retry mechanism
+
+All five guards are applied inside the main generation loop. A candidate that fails any enabled guard is discarded via `continue` and the loop retries with a freshly drawn character set:
+
+```javascript pasgen.js
+const MAX_ATTEMPTS = 200;
+
+for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+  // ... build mandatory[], fill, shuffle ...
+  const pwd = chars.join('');
+
+  if (noRepeating    && hasConsecutiveRepeats(pwd)) continue;
+  if (noSequential   && hasKeyboardWalk(pwd))       continue;
+  if (noSequential   && hasSequentialChars(pwd))    continue;
+  if (noWeakFragment && hasWeakFragment(pwd))       continue;
+
+  return pwd;
+}
+
+// Fallback: skip strict checks after MAX_ATTEMPTS
+const fb = [];
+while (fb.length < length) fb.push(pool.all[cryptoRand(pool.all.length)]);
+return fisherYates(fb).join('');
+```
+
+If no candidate passes within 200 attempts, the engine falls back to an unchecked cryptographically random fill. A result is always returned.
+
+<Warning>
+  Extremely constrained configurations — very short passwords, few character classes, and all guards enabled simultaneously — can hit the 200-attempt limit and fall back to unchecked generation. Increase the password length or enable additional character classes if you see unexpectedly weak results.
+</Warning>
+
+## PIN-specific guards
+
+PIN generation uses a dedicated guard set tuned for digit-only output:
+
+<AccordionGroup>
+  <Accordion title="Common PIN fragment blocking">
+    A hardcoded set of 17 three-digit sequences known to appear in the most commonly breached PINs is checked against every 3-character window of the output:
+
+    ```javascript pasgen.js
+    const COMMON_PINS_3 = new Set([
+      '000','111','123','234','345','456','567','678','789',
+      '987','876','765','654','543','432','321','210'
+    ]);
+    ```
+
+    Any PIN containing one of these substrings is rejected and retried.
+  </Accordion>
+  <Accordion title="Sequential digit blocking">
+    The PIN generator checks every 3-digit window for a constant difference of ±1 between adjacent digits — catching runs like `012`, `987`, and repeated digits like `111`:
+
+    ```javascript pasgen.js
+    for (let i = 0; i <= pin.length - 3; i++) {
+      const d0 = +pin[i], d1 = +pin[i+1], d2 = +pin[i+2];
+      const diff1 = d1 - d0, diff2 = d2 - d1;
+      if (diff1 === diff2 && Math.abs(diff1) <= 1) { seq = true; break; }
+    }
+    ```
+  </Accordion>
+  <Accordion title="Repeat digit blocking">
+    When `noRepeat` is enabled, the PIN must contain at least `min(length, 7)` unique digits — preventing all-same and near-all-same PINs:
+
+    ```javascript pasgen.js
+    if (noRepeat) {
+      if (new Set(pin).size < Math.min(length, 7)) continue;
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+Like the password generator, the PIN generator retries up to 200 times before falling back to an unchecked result.

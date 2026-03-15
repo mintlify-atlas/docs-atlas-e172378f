@@ -1,0 +1,122 @@
+---
+title: 'How KeyForge works'
+description: 'Under the hood — cryptographic randomness, shuffling, and anti-pattern enforcement'
+---
+
+KeyForge generates every password entirely in your browser. No server receives your settings or your output. The security model rests on three pillars: a cryptographically secure random number generator, an unbiased shuffle algorithm, and a suite of anti-pattern guards applied before any result is returned.
+
+## Cryptographic RNG
+
+All randomness in KeyForge comes from [`crypto.getRandomValues()`](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues) — the same Web Crypto API used by your browser for TLS. `Math.random()` is never called.
+
+Two wrapper functions expose this entropy to the rest of the engine:
+
+```javascript pasgen.js
+function cryptoRand(max) {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return buf[0] % max;
+}
+
+function cryptoRandFloat() {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return buf[0] / 0xFFFFFFFF;
+}
+```
+
+`cryptoRand(max)` fills a 32-bit unsigned integer buffer via the OS CSPRNG and returns the result modulo `max`, giving an unbiased index into any character pool up to ~4 billion entries. `cryptoRandFloat()` maps that same value to [0, 1) for use where a float is needed.
+
+<Note>
+  Modulo bias is negligible for pool sizes used in practice (≤ ~100 characters) because `2^32` is orders of magnitude larger than any character pool. No rejection sampling is required.
+</Note>
+
+## Fisher-Yates shuffle
+
+After the character pool is assembled, the raw character array is shuffled using the Fisher-Yates algorithm driven entirely by `cryptoRand`. This guarantees every permutation is equally probable — no positional bias can leak information about the underlying generation order.
+
+```javascript pasgen.js
+function fisherYates(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = cryptoRand(i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+```
+
+The function works on a copy (`arr.slice()`), leaving the original pool untouched. Each pass picks a cryptographically random index in `[0, i]` and swaps, walking from the last position down to index 1.
+
+## Generation pipeline
+
+For password mode, `generatePassword()` runs the following sequence on every attempt:
+
+<Steps>
+  <Step title="Build character pool">
+    `buildPool()` assembles four sub-pools — `lower`, `upper`, `digits`, `symbols` — filtered by the user's enabled classes, ambiguous-character exclusion, and any custom-exclude string. The concatenated `all` pool is used for random fill.
+  </Step>
+  <Step title="Guarantee minimums per class">
+    For each enabled class, the engine pushes `minLower` / `minUpper` / `minDigits` / `minSymbols` characters (each chosen via `cryptoRand`) into a `mandatory` array, capped at the total password length.
+  </Step>
+  <Step title="Force-include custom characters">
+    Any characters in `customInclude` that exist in the pool are appended to `mandatory` (up to the length cap).
+  </Step>
+  <Step title="Fill remaining positions">
+    A `while` loop appends random characters from the full `pool.all` until `mandatory.length === length`.
+  </Step>
+  <Step title="Shuffle with Fisher-Yates">
+    `fisherYates(mandatory)` is called to produce the final character array. The order of guaranteed characters is completely randomized.
+  </Step>
+  <Step title="Apply anti-pattern guards">
+    The joined string is tested against the enabled guards — consecutive repeats, keyboard walks, sequential character codes, and weak dictionary fragments. If any check fails, `continue` discards the candidate and the loop starts over.
+  </Step>
+  <Step title="Return result or fall back">
+    The first candidate that passes all guards is returned. If no candidate passes within 200 attempts, the engine falls back to an unchecked random fill to guarantee a result is always produced.
+  </Step>
+</Steps>
+
+## Character sets
+
+The four built-in character classes are defined as string constants in `CHARSETS`:
+
+```javascript pasgen.js
+const CHARSETS = {
+  lower:   'abcdefghijklmnopqrstuvwxyz',
+  upper:   'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  digits:  '0123456789',
+  symbols: '!@#$%^&*()_+-=[]{}|;:,.<>?/~',
+};
+```
+
+Users can supply a custom `symbolSet` string to replace the default symbol class entirely.
+
+## Ambiguous characters
+
+When **Exclude ambiguous** is enabled, the following 11 characters are removed from every sub-pool before generation begins:
+
+```javascript pasgen.js
+const AMBIGUOUS_CHARS = new Set(['0','O','o','l','1','I','|','`','\"','\\']);
+```
+
+| Character | Reason |
+|-----------|--------|
+| `0`, `O`, `o` | Digit zero and letters O/o are visually identical in many fonts |
+| `l`, `1`, `I`, `\|` | Lowercase L, digit one, uppercase I, and pipe are indistinguishable |
+| `` ` ``, `'`, `"`, `\\` | Backtick, single quote, double quote, and backslash cause copy-paste and shell escaping problems |
+
+The subset `AMBIGUOUS_SYMBOLS` (`|`, `` ` ``, `'`, `"`, `\\`) is also used when filtering the default symbol set independently.
+
+## Client-side architecture
+
+<CardGroup cols={3}>
+  <Card title="No server" icon="server-off">
+    Generation runs entirely in the browser via the Web Crypto API. No settings, no passwords, and no metadata are ever transmitted.
+  </Card>
+  <Card title="No network requests" icon="wifi-off">
+    After the initial page load, KeyForge makes zero outbound requests. It works fully offline.
+  </Card>
+  <Card title="No storage" icon="database">
+    Nothing is written to `localStorage`, `sessionStorage`, or cookies. Closing the tab leaves no trace.
+  </Card>
+</CardGroup>

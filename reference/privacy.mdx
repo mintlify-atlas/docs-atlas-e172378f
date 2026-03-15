@@ -1,0 +1,57 @@
+---
+title: "Privacy policy"
+description: "KeyForge's Zero Data Policy — no data collection, no cookies, no telemetry. All generation runs entirely in your browser."
+keywords: ["privacy", "zero data", "client-side", "no telemetry", "CSPRNG", "cookies"]
+---
+
+<Note>
+  **Zero Data Policy** — KeyForge guarantees complete non-interference with your data. Every password you generate stays on your device. Nothing is ever transmitted to any server.
+</Note>
+
+This policy describes what data KeyForge does and does not collect, how the app handles your browser storage, and what security guarantees underpin the generation engine.
+
+## Policy sections
+
+<AccordionGroup>
+  <Accordion title="1. No data collection">
+    All service functions run exclusively on your device using the browser's built-in `crypto.getRandomValues()` API. KeyForge does not collect, process, or store any personal information whatsoever.
+
+    There is no registration, no account, and no form that submits data anywhere. The passwords you generate exist only in your browser's memory until you copy them.
+  </Accordion>
+
+  <Accordion title="2. No cookies">
+    KeyForge operates with zero cookies. No tracking cookies, no analytics cookies, and no session cookies are set.
+
+    The only browser storage used is `localStorage` for your theme preference (`dark` or `light`). This value never leaves your device and contains no personally identifiable information. You can clear it at any time through your browser's developer tools or site settings.
+  </Accordion>
+
+  <Accordion title="3. No telemetry">
+    No monitoring of user activity occurs. Zero information about your interactions — including which generator mode you use, what settings you configure, or what passwords you generate — is transmitted anywhere.
+
+    Every password you generate stays in your browser only. There is no analytics script, no error tracking service, and no usage beacon of any kind embedded in KeyForge.
+  </Accordion>
+
+  <Accordion title="4. Fully client-side architecture">
+    KeyForge has no backend server. No requests are processed on remote servers at runtime. The app functions completely offline once the page has loaded — you can disconnect from the internet and continue generating passwords without interruption.
+
+    Your generated passwords never leave your device. The generation engine (`pasgen.js`) and the entropy engine (`entropy.js`) both execute entirely within your browser's JavaScript runtime.
+  </Accordion>
+
+  <Accordion title="5. Cryptographic security">
+    All randomness is sourced from `crypto.getRandomValues()`, the browser's cryptographically secure pseudo-random number generator (CSPRNG). This is the same source of entropy used by TLS, SSH key generation, and other security-critical systems.
+
+    `crypto.getRandomValues()` is seeded by the operating system's entropy pool (e.g., `/dev/urandom` on Linux). It is not a pseudo-random math function and cannot be predicted or reproduced from its output.
+
+    The passphrase, PIN, and Phonetic Shield generators all draw from the same CSPRNG. The Fisher-Yates shuffle used to randomize character order also uses `crypto.getRandomValues()` at every step.
+  </Accordion>
+
+  <Accordion title="6. Policy updates">
+    We reserve the right to update this policy. All changes will be published on this page. The date of last update is shown at the bottom of this page.
+
+    Because KeyForge has no user accounts and no contact information, we cannot notify you directly of changes. Check this page periodically if you rely on these guarantees.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+**Last updated: 2026** · KeyForge by [GD](https://gosiverdev.vercel.app/)
