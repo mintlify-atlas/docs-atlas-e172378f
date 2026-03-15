@@ -1,0 +1,71 @@
+{
+  "projectType": "saas",
+  "projectName": "KeyForge",
+  "projectDescription": "A fully client-side, cryptographically secure password generator featuring anti-bruteforce guards, entropy visualization, and a unique Phonetic Shield mode — with zero telemetry.",
+  "theme": "almond",
+  "primaryColor": "#f85826",
+  "lightColor": "#fc9c7c",
+  "darkColor": "#f6f5f4",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart"]
+          },
+          {
+            "group": "Generator Modes",
+            "pages": [
+              "modes/password",
+              "modes/passphrase",
+              "modes/pin",
+              "modes/phonetic-shield"
+            ]
+          },
+          {
+            "group": "Security",
+            "pages": [
+              "security/how-it-works",
+              "security/anti-bruteforce",
+              "security/entropy"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/privacy",
+              "reference/faq"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Cryptographically secure RNG using crypto.getRandomValues()",
+    "Anti-bruteforce guards (block keyboard walks, weak fragments, ambiguous chars)",
+    "Phonetic Shield mode — pronounceable yet resistant passwords",
+    "Entropy DNA visualization per character class",
+    "Passphrase generator with EFF-curated 200-word list",
+    "PIN generator with sequence and pattern blocking",
+    "Real-time entropy bits and crack-time estimation",
+    "100% client-side — zero telemetry, zero data collection",
+    "Dark/light theme with localStorage persistence",
+    "Ctrl+Enter keyboard shortcut for quick regeneration"
+  ],
+  "publicApiSurface": [
+    "PassGen.generatePassword(options)",
+    "PassGen.generatePassphrase(options)",
+    "PassGen.generatePin(options)",
+    "PassGen.generatePhonetic(options)",
+    "Entropy.calcPasswordEntropy(length, poolSize)",
+    "Entropy.calcPassphraseEntropy(wordCount, wordListSize, hasNum, hasSym)",
+    "Entropy.calcPinEntropy(length)",
+    "Entropy.calcPhoneticEntropy(syllableCount, entropyLevel)",
+    "Entropy.getCrackTime(entropyBits)",
+    "Entropy.renderEntropyDNA(password, containerId)",
+    "Entropy.updateStrengthUI(entropy, prefix)"
+  ]
+}
